@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <script src="gpu-browser.min.js"></script>
 
-
+<title>Dear Mr RootKit : and now my favourite song please</title>
 </head>
 <body>
 Progress : <span id="abc"></span>
@@ -110,8 +110,10 @@ constructor(sampleRate,tone,sustain,vol,vibOn,cvName) {
 		let z = xs[Math.round(f) % len];
 		//z *= Math.cos(0.05 * x * Math.pow(2,-Math.floor(rands[101] * 4.0 + 1.0))) + 2;
 		//z *= Math.cos(0.1 * y * Math.pow(2,-Math.floor(rands[102] * 4.0 + 1.0))) + 2;
-		z *= Math.cos(y * 0.005 * (rands[0] * 0.1 + 0.9)) + (1.5 * (rands[1] * 0.1 + 0.9));
-		z *= Math.cos(y * 0.001 * (rands[2] * 0.1 + 0.9) * Math.pow(2.0,tone / 12.0)) + (1.5 * (rands[3] * 0.1 + 0.9));
+		if(vibOn == 1) {
+			z *= Math.abs(Math.cos(y * 0.25 * (rands[0] * 0.5 + 0.5))) + (2 * (rands[1] * 0.5 + 0.5));
+			z *= Math.abs(Math.cos(y * 0.025 * (rands[2] * 0.5 + 0.5) * Math.pow(2.0,tone / 12.0))) + (2 * (rands[3] * 0.5 + 0.5));
+		}
 		return	z;
 	}).setOutput([sampleRate]); // over 1 second
 
@@ -132,12 +134,12 @@ constructor(sampleRate,tone,sustain,vol,vibOn,cvName) {
 		return (xs);
 	};
 		
-	this.fGPU = gpu.createKernel(function(xs) {
+	/*this.fGPU = gpu.createKernel(function(xs) {
 		let s = 0;
 		let n = 100;
 		for(let k = -n;k <= n;++k) s += Math.abs(xs[this.thread.x + k] - xs[this.thread.x]) * (n - Math.abs(k)) / n;
 		return s / 2.0 / n;
-	}).setOutput([sampleRate]); 
+	}).setOutput([sampleRate]); */
 	
 	this.madd = gpu.createKernel(function(nowBuffering,offset,xs,f) {
 		return nowBuffering[this.thread.x + offset] + xs[this.thread.x] * f;
@@ -176,8 +178,8 @@ render(buffer,offset,tone,sustain,vol) {
 	var nowBuffering = buffer.getChannelData(channel);
 	var xs = this.waveGPU(this.xs,this.xs.length,this.rands,this.sampleRate,this.tone + tone,this.sustain * sustain,this.vibOn,1);
 	
-	var ys = this.fGPU(xs);
-	ys = xs;
+	//var ys = this.fGPU(xs);
+	let ys = xs;
 	var imin = 200;
 	let y = 1000000;
 	for(let i = 200;i < ys.length - 200;++i) if(Math.abs(xs[i]) > 0.5) if(Math.abs(ys[i]) < y) {y = Math.abs(ys[i]);imin = i;}
@@ -350,32 +352,31 @@ ms = [];
 //Drums
 let sust;
 let ins;
-/*
+
 
 	sust = 0.1;
-	ins = new Instrument(audioCtx.sampleRate,-24,sust,1,Math.random(),"cv1");
+	ins = new Instrument(audioCtx.sampleRate,-24,sust,2,1,"cv1");
 for(let i = 0;i < 3;++i)
 {
-	ms.push(new Melody(1,5,ins));
+	ms.push(new Melody(0.5,5,ins));
 }
-
-*/
 
 
 	sust = 0.3 * Math.random() + 0.2;
-	ins = new Instrument(audioCtx.sampleRate,-12,sust,1,Math.random());
+	ins = new Instrument(audioCtx.sampleRate,-12,sust,1,0);
 for(let i = 0;i < 5;++i)
 {
 	ms.push(new Melody(2,-1,ins));
 }
 
 	sust = 0.3 * Math.random() + 0.2;
-	ins = new Instrument(audioCtx.sampleRate,0,sust,1,Math.random(),"cv1");
+	ins = new Instrument(audioCtx.sampleRate,0,sust,1,0,"cv1");
 
 //Sound
 for(let i = 0;i < 5;++i) {
 	ms.push(new Melody(1,-1,ins));
 }
+
 
 make();
 } else window.setTimeout(sound,10);
@@ -388,9 +389,9 @@ make();
 <br>
 Seconds : 
 <select id="sec">
-<option value="30" >30</option>
+<option value="30" selected>30</option>
 <option value="60" >60</option>
-<option value="120" selected>120</option>
+<option value="120" >120</option>
 <option value="180">180</option>
 </select>
 
